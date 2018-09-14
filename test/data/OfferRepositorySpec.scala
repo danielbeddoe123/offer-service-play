@@ -3,11 +3,10 @@ package data
 import java.time.LocalDate.now
 import java.util.UUID
 
-import controllers.InMemoryDatabaseSetup
+import _root_.data.tables.{Merchandise, Merchant, Offer}
+import db.InMemoryDatabaseSetup
 import org.scalatest.mockito.MockitoSugar
 import play.api._
-import _root_.data.tables.{Merchant, Offer, Merchandise}
-import play.api.db.slick.DatabaseConfigProvider
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import service.OfferService

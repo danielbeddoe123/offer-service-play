@@ -1,7 +1,4 @@
-package controllers
-
-import java.time.LocalDate.now
-import java.util.UUID
+package db
 
 import data.tables._
 import org.scalatest._
@@ -10,7 +7,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.db.slick.DatabaseConfigProvider
-import slick.dbio.{DBIOAction, Effect, NoStream}
+import slick.dbio.DBIOAction
 import slick.jdbc.H2Profile.api._
 import slick.jdbc.meta.MTable
 

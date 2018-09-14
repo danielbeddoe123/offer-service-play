@@ -1,20 +1,20 @@
 package data
 
+import java.util.UUID
+
+import data.tables.{Merchandise, merchandises}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
-import tables.{Offer, offers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class OfferRepositoryImpl @Inject()
+class MerchandiseRepositoryImpl @Inject()
   (protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext)
-  extends OfferRepository with HasDatabaseConfigProvider[JdbcProfile] {
+  extends MerchandiseRepository with HasDatabaseConfigProvider[JdbcProfile] {
 
   import profile.api._
 
-  def findAll(): Future[Seq[Offer]] = db.run(offers.result)
-  def create(offer: Offer): Future[Int] = db.run(offers += offer)
-
+  override def findById(id: UUID): Future[Merchandise] = db.run(merchandises.filter(_.id === id).result.head)
 }

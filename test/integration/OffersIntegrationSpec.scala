@@ -1,29 +1,33 @@
-package controllers
+package integration
 
+import java.time.LocalDate
 import java.util.UUID
 
+import com.google.inject.Singleton
 import data.tables.{Merchandise, Merchant}
-import data.{OfferRepository, OfferRepositoryImpl}
+import data.{MerchandiseRepository, MerchandiseRepositoryImpl, OfferRepository, OfferRepositoryImpl}
+import db.InMemoryDatabaseSetup
 import javax.inject.Inject
 import model.Offer
-import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
-import play.api.inject.bind
 import play.api.{Application, Mode}
-import service.{OfferService, OfferServiceImpl}
+import service.{MerchandiseService, MerchandiseServiceImpl, OfferService, OfferServiceImpl}
+
 
 class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
 
   private val offerId = UUID.randomUUID
-  private val mockedOfferService = mock[OfferService]
 
   override def fakeApplication(): Application = {
     new GuiceApplicationBuilder()
-      .bindings(bind[OfferService].toInstance(mockedOfferService))
+      .bindings(bind[OfferService].to[MockedOfferService])
       .bindings(bind[OfferRepository].to[OfferRepositoryImpl])
+      .bindings(bind[MerchandiseService].to[MerchandiseServiceImpl])
+      .bindings(bind[MerchandiseRepository].to[MerchandiseRepositoryImpl])
       .in(Mode.Test)
       .build()
   }
@@ -36,7 +40,8 @@ class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
     setupDB
 
     "create an offer" in {
-      mockedOfferService
+      val mockedOfferService = app.injector.instanceOf[MockedOfferService]
+      mockedOfferService.offerId = offerId
 
       insertMerchant(Merchant(merchantId, "Merchant 1"))
       insertMerchandise(Merchandise(merchandiseId, "PRODUCT", merchantId))
@@ -53,6 +58,14 @@ class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
       response.status mustBe CREATED
       response.header("Location").value mustBe s"$createOfferUrl/$offerId"
       validateNumOffers(1)
+      val createdOffer = fetchOffers().head
+
+      assert(createdOffer.active)
+      assert(createdOffer.description == "Some description")
+      assert(createdOffer.price == BigDecimal(20.00))
+      assert(createdOffer.currency == "GBP")
+      assert(createdOffer.merchandiseId == merchandiseId)
+      assert(createdOffer.expiryDate == LocalDate.of(2018, 12, 31))
     }
   }
 
@@ -72,3 +85,15 @@ class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
   }
 
 }
+
+@Singleton
+class MockedOfferService @Inject()(override val offerRepository: OfferRepository) extends OfferServiceImpl(offerRepository) {
+  var offerId: UUID = _
+
+  override def createOffer(offer: Offer): UUID = {
+    super.createOffer(offer)
+    offerId
+  }
+}
+
+
