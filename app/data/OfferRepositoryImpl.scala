@@ -14,7 +14,6 @@ class OfferRepositoryImpl @Inject()
 
   import profile.api._
 
-  def findAll(): Future[Seq[Offer]] = db.run(offers.result)
   def create(offer: Offer): Future[Int] = db.run(offers += offer)
 
 }

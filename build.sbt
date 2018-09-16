@@ -12,6 +12,7 @@ libraryDependencies += "com.typesafe.play" %% "play-slick" % "3.0.0"
 libraryDependencies += "com.h2database" % "h2" % "1.4.197"
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 libraryDependencies += "org.mockito" %% "mockito-scala" % "0.3.0" % Test
+libraryDependencies += "org.awaitility" % "awaitility-scala" % "3.1.2" % Test
 
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick" % "3.2.3",

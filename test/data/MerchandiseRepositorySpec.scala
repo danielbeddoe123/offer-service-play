@@ -12,13 +12,11 @@ import service.OfferService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MerchandiseRepositorySpec extends InMemoryDatabaseSetup with MockitoSugar {
+class MerchandiseRepositorySpec extends InMemoryDatabaseSetup {
 
   override def fakeApplication(): Application = {
-    new GuiceApplicationBuilder()
-      .bindings(bind[OfferService].toInstance(mock[OfferService]))
-      .in(Mode.Test)
-      .build()
+    RepositoryApplicationBuilder.fakeApplicationWithBinding(
+      bind[MerchandiseRepository].to[MerchandiseRepositoryImpl])
   }
 
   "MerchandiseRepository" should {

@@ -1,14 +1,18 @@
 package integration
 
 import java.time.LocalDate
-import java.util.UUID
+import java.util.Currency.getInstance
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.{Currency, UUID}
 
 import com.google.inject.Singleton
 import data.tables.{Merchandise, Merchant}
-import data.{MerchandiseRepository, MerchandiseRepositoryImpl, OfferRepository, OfferRepositoryImpl}
+import data._
 import db.InMemoryDatabaseSetup
 import javax.inject.Inject
-import model.Offer
+import model.{Offer, Price, Merchandise => ModelMerchandise, Merchant => ModelMerchant}
+import org.awaitility.Awaitility
 import org.scalatest.mockito.MockitoSugar
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -16,6 +20,7 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.api.{Application, Mode}
 import service.{MerchandiseService, MerchandiseServiceImpl, OfferService, OfferServiceImpl}
+import utils.DataRequestFactory
 
 
 class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
@@ -28,6 +33,7 @@ class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
       .bindings(bind[OfferRepository].to[OfferRepositoryImpl])
       .bindings(bind[MerchandiseService].to[MerchandiseServiceImpl])
       .bindings(bind[MerchandiseRepository].to[MerchandiseRepositoryImpl])
+      .bindings(bind[MerchantRepository].to[MerchantRepositoryImpl])
       .in(Mode.Test)
       .build()
   }
@@ -52,38 +58,34 @@ class OffersIntegrationSpec extends InMemoryDatabaseSetup with MockitoSugar {
       val createOfferUrl = s"http://$serverUrl/merchandise/$merchandiseId/offer"
       val request = wsClient.url(createOfferUrl)
         .withHttpHeaders("Content-Type" -> "application/json")
+      val description = "Some description"
+      val expiryDate = LocalDate.of(2018, 12, 31)
+      val currencyCode = "GBP"
+      val priceAmount = BigDecimal(20.00)
+      val active = true
+      val offer = Offer(ModelMerchandise(merchandiseId, ModelMerchant(merchantId)), expiryDate, description, Price(getInstance(currencyCode), priceAmount), active)
+      val json = DataRequestFactory.generateJson(offer)
 
-      val response = await(request.post(offerJson))
+      val response = await(request.post(json))
 
       response.status mustBe CREATED
       response.header("Location").value mustBe s"$createOfferUrl/$offerId"
-      validateNumOffers(1)
+
+      Awaitility.await().atMost(5, SECONDS).pollDelay(1, SECONDS).until(() => {
+        val size = fetchOffers().size
+        size == 1
+      })
+
       val createdOffer = fetchOffers().head
 
       assert(createdOffer.active)
-      assert(createdOffer.description == "Some description")
-      assert(createdOffer.price == BigDecimal(20.00))
-      assert(createdOffer.currency == "GBP")
+      assert(createdOffer.description == description)
+      assert(createdOffer.price == priceAmount)
+      assert(createdOffer.currency == currencyCode)
       assert(createdOffer.merchandiseId == merchandiseId)
-      assert(createdOffer.expiryDate == LocalDate.of(2018, 12, 31))
+      assert(createdOffer.expiryDate == expiryDate)
     }
   }
-
-  val offerJson: String = {
-    val expiryDate = "2018-12-31"
-    val priceAmount = 20.00
-    s""" {
-       |     "expiryDate": "$expiryDate",
-       |     "description": "Some description",
-       |     "price":   {
-       |        "currency": "GBP",
-       |        "amount": $priceAmount
-       |     },
-       |     "active": true
-       |  }
-    """.stripMargin
-  }
-
 }
 
 @Singleton

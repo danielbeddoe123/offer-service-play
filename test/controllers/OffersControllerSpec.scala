@@ -6,7 +6,6 @@ import java.util.{Currency, UUID}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.{Merchandise, Offer, Price}
-import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.OptionValues
 import org.scalatest.mockito.MockitoSugar
@@ -16,6 +15,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import service.{MerchandiseService, OfferService}
 import utils.DataRequestFactory
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 class OffersControllerSpec extends PlaySpec with MockitoSugar with OptionValues {
 
@@ -32,17 +34,17 @@ class OffersControllerSpec extends PlaySpec with MockitoSugar with OptionValues 
       val merchandise = mock[Merchandise]
       val offer = Offer(merchandise, LocalDate.now(), "Some description", Price(Currency.getInstance("GBP"), BigDecimal(20.00)), active = true)
       when(mockOfferService.createOffer(offer)).thenReturn(offerId)
-      when(mockMerchandiseService.fetchMerchandiseById(merchandiseId)).thenReturn(merchandise)
+      when(mockMerchandiseService.fetchMerchandiseById(merchandiseId)).thenReturn(Future(merchandise))
 
       val controller = new OfferController(stubControllerComponents(), mockOfferService, mockMerchandiseService)
       val path = s"/merchandise/$merchandiseId/offer"
 
       val fakeRequest = FakeRequest(POST, path)
-        .withJsonBody(Json.parse(DataRequestFactory.generateJson(offer)))
+        .withBody(Json.parse(DataRequestFactory.generateJson(offer)))
+        .withHeaders("Content-Type" -> "application/json")
       val result = controller.createOffer(merchandiseId)(fakeRequest)
 
-
-      status(result) mustBe play.api.http.Status.CREATED
+      status(result) mustBe CREATED
       header("Location", result).value must include (s"/merchandise/$merchandiseId/offer/$offerId")
     }
   }
